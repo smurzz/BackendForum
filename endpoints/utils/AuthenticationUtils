@@ -1,0 +1,84 @@
+var logger = require('../../config/winston');
+var config = require("config");
+var jwt = require('jsonwebtoken');
+var forumService = require('../forumThread/ForumThreadService');
+var messageService = require('../forumMessage/ForumMessageService');
+
+const { JsonWebTokenError } = require('jsonwebtoken');
+
+// Verify token
+function isAuthenticated(req, res, next) {
+    logger.debug("Authentifizierung von Token hat begonnen..");
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(" ")[1];
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.setHeader('Access-Control-Expose-Headers', 'Authorization');
+    
+    if (token == null) {
+        logger.error("Authentication Token wurde nicht bereitgestellt.");
+        return res.status(401).json({ "Fehler": "Authentication Token wurde nicht bereitgestellt." });
+    } else {
+        var privateKey = config.get('session.tokenKey');
+        var payload;
+        try {
+            payload = jwt.verify(token, privateKey);
+            const user = payload;
+            req.user = user;
+            next();
+        } catch (error) {
+            if (error instanceof JsonWebTokenError) {
+                logger.error(error);
+                return res.status(401).json({ "Error": "JsonWebTokenError: " + error.message });
+            }
+            logger.error("Fehler bei der Verifizierung.");
+            return res.status(400).json({ "Fehler": "Verifizierung von Token ist gescheitert." });
+        }
+    }
+}
+
+// Token for forum authenticated
+function tokenForumAuth ( req, res, next ){
+    var { _id } = req.params;
+    var ownerID = req.user.userID;
+
+    forumService.findForumByID(_id, function (err, forum) {
+        if (forum) {
+            if (forum.ownerID === ownerID) {
+                next();
+            } else {
+                logger.error("Keine Rechte für Aktualisierung des Forums.");
+                return res.status(401).json({"Fehler" : "Keine Rechte für Aktualisierung des Forums."});
+            }
+        } else {
+            logger.error(err);
+            return res.status(404).json({ "Fehler": err });
+        }
+    });
+}
+
+// Token for message authenticated
+function tokenMessageAuth ( req, res, next ){
+    var { _id } = req.params;
+    var ownerID = req.user.userID;
+
+    messageService.findMessageByID( _id , function (err, message) {
+        if (message) {
+            if (message.authorID === ownerID) {
+                next();
+            } else {
+                logger.error("Keine Rechte für Aktualisierung der Nachricht.");
+                return res.status(401).json({"Fehler" : "Keine Rechte für Aktualisierung der Nachricht."});
+            }
+        } else {
+            return res.status(404).json({ "Fehler": err });
+        }
+    });
+}
+
+module.exports = {
+    isAuthenticated,
+    tokenForumAuth,
+    tokenMessageAuth
+};

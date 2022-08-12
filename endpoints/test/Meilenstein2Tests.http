@@ -1,0 +1,224 @@
+// Re-test Meilenstein 1, es sollte der Standard-Admin in der Datenbank sein
+###
+http://localhost:8080/publicUsers
+
+// Login mit Basic Authentication als admin mit korrekten Credentials admin:123
+###
+# @name loginAdminCorrect
+GET http://localhost:8080/authenticate
+Authorization: Basic YWRtaW46MTIz
+
+// Login mit Basic Authentication als admin mit vermisster Autorization (Fehler)
+###
+# @name loginAdminIncorrect
+GET http://localhost:8080/authenticate
+
+// Login mit Basic Authentication als admin mit falschen Credentials
+###
+GET http://localhost:8080/authenticate
+Authorization: Basic admin:1234
+
+@adminToken = {{loginAdminCorrect.response.headers.Authorization}}
+
+### Auflisten aller Nutzer ohne Token
+http://localhost:8080/users
+
+### Auflisten aller Nutzer mit Token von admin
+http://localhost:8080/users
+Authorization: {{adminToken}}
+
+### Lege neuen user manfred an
+POST http://localhost:8080/users
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "userID": "manfred",
+    "userName": "Manfred Mustermann",
+    "password": "asdf"
+}
+
+### Auflisten manfred
+GET http://localhost:8080/users?userID=manfred&isAdministrator=false
+Authorization: {{adminToken}}
+
+### Auflisten aller Admins
+GET http://localhost:8080/users?userID=admin&isAdministrator=true
+Authorization: {{adminToken}}
+
+### Auflisten aller nicht Admins
+GET http://localhost:8080/users?isAdministrator=false
+Authorization: {{adminToken}}
+
+### Lege neuen user ohne TOken lila an (Fehler)
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+    "userID": "lila",
+    "userName": "Lila Pops",
+    "password": "1234"
+}
+
+### Abrufen des angelegten Users mit dem Admin-Token
+GET http://localhost:8080/users/manfred
+Authorization: {{adminToken}}
+
+### Abrufen des angelegten Users ohne dem Admin-Token (Fehler)
+GET http://localhost:8080/users/manfred
+
+// Login mit Basic Authentication als manfred mit korrekten Credentials manfred:asdf
+###
+# @name loginManfredCorrect
+GET http://localhost:8080/authenticate
+Authorization: Basic manfred:asdf
+
+@manfredToken = {{loginManfredCorrect.response.headers.Authorization}}
+
+### Auflisten aller Nutzer mit Token von manfred (Fehler)
+GET http://localhost:8080/users
+Authorization: {{manfredToken}}
+
+### Auflisten aller Foren ohne Token
+GET http://localhost:8080/forumThreads
+
+// Lege ein ersten Forum an, der Administrator ist owner
+###
+# @name createForumRequest
+POST http://localhost:8080/forumThreads
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Mein erstes Forum",
+    "description": "Das ist ein erstes Forum, das ich im Rahmen der Tests angelegt habe"
+}
+
+###
+@forumThreadID = {{createForumRequest.response.body._id}}
+
+### Auflisten aller Foren ohne Token, nun sollte es ein Forum geben
+http://localhost:8080/forumThreads
+
+### Abrufen von dem gelöschten Forum-Thread (Fehler)
+http://localhost:8080/forumThreads/{{forumThreadID}}
+
+### Abrufen von dem angelegten Forum-Thread
+http://localhost:8080/forumThreads/627d2d7490db030dcad9faeb
+
+### Ändere die forumDescription in dem nicht existierenden Forum (Fehler)
+PUT http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "description": "Das ist der neue Text, warum auch nicht."
+}
+
+### Ändere die forumDescription in dem existierenden Forum mit falschem Token (Fehler)
+PUT http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{manfredToken}}
+Content-Type: application/json
+
+{
+    "name": "Mein neues Thema",
+    "description": "La la la."
+}
+
+### Ändere die forumDescription und Name in dem existierenden Forum
+PUT http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Mein neues Thema",
+    "description": "La la la."
+}
+
+// Lege ein ersten Forum an, der owner ist falsch
+###
+# @name createForumRequest
+POST http://localhost:8080/forumThreads
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "name": "Mein zweites Forum",
+    "description": "Das ist ein zweites Forum, das ich im Rahmen der Tests angelegt habe",
+    "ownerID": "manfred"
+}
+
+// Lege ein ersten Forum an, der owner ist richtig
+###
+# @name createForumRequest2
+POST http://localhost:8080/forumThreads
+Authorization: {{manfredToken}}
+Content-Type: application/json
+
+{
+    "name": "Mein zweites Forum",
+    "description": "Das ist ein zweites Forum, das ich im Rahmen der Tests angelegt habe",
+    "ownerID": "manfred"
+}
+
+### Keine Änderungen in dem existierenden Forum (Fehler)
+PUT http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+### Ändere die forumDescription in dem existierenden Forum
+PUT http://localhost:8080/forumThreads/627d2d7490db030dcad9faeb
+Authorization: {{adminToken}}
+Content-Type: application/json
+
+{
+    "description": "Das ist der neue Text, warum auch nicht."
+}
+
+### Auflisten der Foren des aktuellen users
+GET http://localhost:8080/forumThreads/myForumThreads
+Authorization: {{adminToken}}
+
+### Auflisten der Foren des aktuellen users ohne Token (Fehler)
+GET http://localhost:8080/forumThreads/myForumThreads
+
+### Auflisten der Foren einen bestimmten user (leer)
+GET http://localhost:8080/forumThreads?ownerID=manfred
+
+### Auflisten der Foren einen bestimmten user
+GET http://localhost:8080/forumThreads?ownerID=admin
+
+### Lösche den nicht existierten Forum-Thread (Fehler)
+DELETE http://localhost:8080/forumThreads/627d2d7490db030dcad9faeb
+Authorization: {{adminToken}}
+
+### Lösche den existierten und falschem Token Forum-Thread (Fehler)
+DELETE http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{manfredToken}}
+
+### Lösche den existierten und richtigen Token Forum-Thread
+DELETE http://localhost:8080/forumThreads/{{forumThreadID}}
+Authorization: {{adminToken}}
+
+### Lösche den existierten und richtigen Token Forum-Thread
+DELETE http://localhost:8080/forumThreads/627d49a7c98d59acc747e45e
+Authorization: {{adminToken}}
+
+### Lösche den User manfred
+DELETE http://localhost:8080/users/manfred
+Authorization: {{adminToken}}
+
+### Lösche den User manfred (Fehler)
+DELETE http://localhost:8080/users/manfred
+
+### Lösche den User manfred (Fehler)
+DELETE http://localhost:8080/users/admin
+Authorization: {{manfredToken}}
+
+### Lösche den User manfred (Fehler)
+DELETE http://localhost:8080/users
+Authorization: {{adminToken}}
+
+### Lösche den User manfred 
+DELETE http://localhost:8080/users/admin
+Authorization: {{adminToken}}

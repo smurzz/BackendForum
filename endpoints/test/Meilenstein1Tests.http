@@ -1,0 +1,123 @@
+// Rufe alle User ab. Zu Beginn sollten keine User in der Datenbank sein. 
+###
+GET http://localhost:8080/publicUsers
+
+// Lege ersten User an, der Administrator ist
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+    "userID": "admin",
+    "userName": "Udo",
+    "password": "123",
+    "isAdministrator": true
+}
+
+// Lege ersten User an, der Entitäte hat, die nicht in SchemaUser deklariert sind (werden ingnoriert)
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+    "userID": "ponchik",
+    "userName": "Sergio Berlusconi",
+    "password": "12abc3",
+    "isAdministrator": false,
+    "email": "ponchik@gmail.com"
+}
+
+// Lege ersten User an, bei dem Entitäte fehlen, die erforderlich für die Registrirung sind sind ()
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+    "userName": "Sergio Berlusconi",
+    "password": "12abc3",
+    "isAdministrator": false
+}
+
+// Lege ersten User an, der keine Entitäte hat (werden ingnoriert)
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{}
+
+// Rufe den User mit UserID admin ab. 
+###
+GET http://localhost:8080/publicUsers/admin
+
+// Rufe einen User mit UserID ab, der nicht existiert.
+###
+GET http://localhost:8080/publicUsers/admiral
+
+// Lege zweiten User an. Prüfe UserID und UserName, ob die Angaben korrekt sind.
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+    "userID": "manfred",
+    "userName": "Manfred Mustermann",
+    "password": "asdf"
+}
+
+// Ändere beim zweiten User den User-Name. Zur Selektion des Users verwende die userID.
+###
+PUT http://localhost:8080/publicUsers/manfred
+Content-Type: application/json
+
+{
+    "userName": "Manfred Müller"
+}
+
+// Ändere beim zweiten User den User-Name. Zur Selektion des Users verwende die userID.
+###
+PUT http://localhost:8080/publicUsers/monfred
+Content-Type: application/json
+
+{
+    "userID": "rambo"
+}
+
+// Rufe alle User ab. Es sollten 2 User zurückgegeben werden.
+###
+GET http://localhost:8080/publicUsers
+
+// Lösche den User mit der User-ID manfred
+###
+DELETE  http://localhost:8080/publicUsers/manfred
+
+###
+POST http://localhost:8080/publicUsers
+Content-Type: application/json
+
+{
+    "userID": "susi",
+    "userName": "Susi Loise",
+    "password": "cdfvb"
+}
+
+###
+PUT http://localhost:8080/publicUsers/susi
+Content-Type: application/json
+
+{
+    "password": "dkjh"
+}
+
+###
+DELETE  http://localhost:8080/publicUsers/admin
+
+###
+DELETE  http://localhost:8080/publicUsers/ponchik
+
+###
+PUT http://localhost:8080/publicUsers/admin
+Content-Type: application/json
+
+{
+    "userID": "susi"
+}
