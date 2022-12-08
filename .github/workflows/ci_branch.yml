@@ -5,7 +5,7 @@ name: Sonar Cloud - Branch Analysis
 on:
   push:
     branches:
-      - master
+      - main
       - release-*
 
 # A workflow run is made up of one or more jobs that can run requentially or in parallel
